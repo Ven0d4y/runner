@@ -1,0 +1,35 @@
+rules:
+  - id: wp-xss-addqueryarg-unescaped
+    patterns:
+      - pattern-regex: '\b(?:echo|print)\s*(?:\(?\s*)?(?:add_query_arg|remove_query_arg)\s*\('
+      - pattern-not-regex: '\b(?:echo|print)\s*(?:esc_url|esc_attr)\s*\(\s*(?:add_query_arg|remove_query_arg)\s*\('
+    message: "add_query_arg/remove_query_arg output is being echoed without esc_url/esc_attr. This can lead to XSS when placed inside HTML attributes."
+    languages: [php]
+    severity: ERROR
+    metadata:
+      precision: high
+      cwe: "CWE-79"
+
+  - id: wp-xss-php-self-form-action
+    patterns:
+      # match a <form ... action="<?php echo $_SERVER['PHP_SELF'] ... ?>"
+      - pattern-regex: '<form[^>]+action\s*=\s*["'']\s*<\?php\s+echo\s+\$_SERVER\[\s*["'']PHP_SELF["'']\s*\]\s*;?\s*\?>'
+      # do NOT flag if the PHP_SELF is wrapped with esc_url() or esc_attr() (negative regex)
+      - pattern-not-regex: 'esc_(?:url|attr)\s*\(\s*<\?php\s+echo\s+\$_SERVER\[\s*["'']PHP_SELF["'']\s*\]\s*;?\s*\?\>'
+    message: "Form action echoes $_SERVER['PHP_SELF'] directly — wrap in esc_url()/esc_attr() and validate input."
+    languages: [php]
+    severity: ERROR
+    metadata:
+      precision: high
+      cwe: "CWE-79"
+
+  - id: wp-xss-strip-tags-in-attribute
+    patterns:
+      - pattern-regex: '(?is)<(?:input|textarea|option|button)[^>]+(?:value|placeholder|title)\s*=\s*["''][^"'']*<\?php\s+echo\s+[^;]*strip_tags\s*\('
+      - pattern-not-regex: '(?is)<(?:input|textarea|option|button)[^>]+(?:value|placeholder|title)\s*=\s*["''][^"'']*<\?php\s+echo\s+(?:esc_attr|esc_html|esc_url)\s*\('
+    message: "strip_tags() used inside an HTML attribute echo. strip_tags() does not properly escape attribute context — use esc_attr()/esc_html()/esc_url() and validate input."
+    languages: [php]
+    severity: WARNING
+    metadata:
+      precision: medium
+      cwe: "CWE-79"
